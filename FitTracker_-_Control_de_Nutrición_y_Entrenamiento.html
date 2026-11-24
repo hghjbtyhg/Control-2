@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitTracker - Control de Nutrición y Entrenamiento</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+            },
+            polar: {
+              500: '#ef4444',
+              600: '#dc2626',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    /* Hide spin buttons on number inputs for cleaner UI */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] { -moz-appearance: textfield; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col pb-12 selection:bg-emerald-500 selection:text-white">
+
+  <!-- TOP APP HEADER -->
+  <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3">
+    <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <!-- Logo & Title -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-emerald-500/20">
+          ⚡
+        </div>
+        <div>
+          <h1 class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+            FitTracker
+          </h1>
+          <p class="text-xs text-emerald-400 font-medium">Pérdida de grasa & Mantenimiento Muscular</p>
+        </div>
+      </div>
+
+      <!-- Date Navigator -->
+      <div class="flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 shadow-inner">
+        <button id="btn-prev-day" title="Día Anterior" class="px-2.5 py-1.5 hover:bg-slate-700 text-slate-300 rounded-lg transition text-xs font-semibold flex items-center gap-1">
+          ‹
+        </button>
+        <button id="btn-today" class="px-3 py-1.5 hover:bg-slate-700 text-slate-200 rounded-lg transition text-xs font-medium">
+          Hoy
+        </button>
+        <input type="date" id="date-picker" class="bg-transparent text-slate-200 text-xs font-medium px-2 py-1 outline-none cursor-pointer" />
+        <button id="btn-next-day" title="Día Siguiente" class="px-2.5 py-1.5 hover:bg-slate-700 text-slate-300 rounded-lg transition text-xs font-semibold">
+          ›
+        </button>
+      </div>
+
+      <!-- Quick Action Options -->
+      <div class="flex items-center gap-2">
+        <button id="btn-open-settings" class="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-slate-300 hover:text-white transition text-xs flex items-center gap-1.5">
+          <span>⚙️</span> <span class="hidden sm:inline font-medium">Ajustes / Metas</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-6xl mx-auto w-full px-4 pt-6 space-y-6 flex-grow">
+
+    <!-- DAILY BALANCE SUMMARY DASHBOARD (CARD TOP) -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        
+        <!-- Caloric Balance Gauge & Status -->
+        <div class="flex-1 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Balance Calórico Diario</span>
+            <span id="deficit-badge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              Cargando balance...
+            </span>
+          </div>
+
+          <!-- Large Numbers Display -->
+          <div class="grid grid-cols-3 gap-2 sm:gap-4 text-center">
+            <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+              <span class="text-[10px] sm:text-xs text-slate-400 font-semibold block">Ingeridas 🥗</span>
+              <span id="dash-ingested" class="text-xl sm:text-2xl font-black text-emerald-400">0</span>
+              <span class="text-[10px] text-slate-500 block">kcal</span>
+            </div>
+            <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+              <span class="text-[10px] sm:text-xs text-slate-400 font-semibold block">Quemadas ⌚</span>
+              <span id="dash-burned" class="text-xl sm:text-2xl font-black text-rose-400">0</span>
+              <span class="text-[10px] text-slate-500 block">kcal</span>
+            </div>
+            <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+              <span class="text-[10px] sm:text-xs text-slate-400 font-semibold block">Déficit / Balance</span>
+              <span id="dash-net" class="text-xl sm:text-2xl font-black text-cyan-400">0</span>
+              <span class="text-[10px] text-slate-500 block">kcal netas</span>
+            </div>
+          </div>
+
+          <!-- Progress Bar towards Target Deficit -->
+          <div>
+            <div class="flex justify-between text-xs text-slate-400 font-medium mb-1">
+              <span>Objetivo Ingesta: <strong id="target-ingest-val" class="text-slate-200">2000 kcal</strong></span>
+              <span>Déficit Objetivo: <strong id="target-deficit-val" class="text-emerald-400">400 kcal</strong></span>
+            </div>
+            <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
+              <div id="deficit-progress-bar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Daily Macro Targets & Breakdown -->
+        <div class="lg:w-72 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80 space-y-3 flex flex-col justify-between">
+          <div class="flex justify-between items-center">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Proteína & Macros</h3>
+            <span class="text-[11px] text-slate-400">Meta: <span id="target-protein-val" class="font-bold text-emerald-400">140g</span></span>
+          </div>
+
+          <!-- Protein Progress -->
+          <div>
+            <div class="flex justify-between text-xs font-medium mb-1">
+              <span class="text-slate-300">Proteína consumida:</span>
+              <span class="text-emerald-400 font-bold"><span id="dash-protein">0</span> / <span id="target-prot-max">140</span>g</span>
+            </div>
+            <div class="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+              <div id="protein-progress-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- Micro indicator advice for fat loss/muscle retention -->
+          <div class="text-[11px] text-slate-400 bg-slate-900/80 p-2 rounded-lg border border-slate-800 leading-snug">
+            💡 <strong>Consejo Proteico:</strong> Mantener ~1.8-2.2g de proteína por kg sostiene la masa muscular en déficit.
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION 1: SMART NATURAL LANGUAGE FOOD INPUT & PARSER -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-100 flex items-center gap-2">
+            <span>🧠</span> <span>Cálculo Inteligente de Comida en Texto Libre</span>
+          </h2>
+          <p class="text-xs text-slate-400">Escribe lo que has comido en lenguaje natural. La app estimará calorías y proteínas que <strong>podrás editar en todo momento</strong>.</p>
+        </div>
+        <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-lg border border-emerald-500/20 font-mono font-medium self-start sm:self-auto">
+          IA Nutricional integrada
+        </span>
+      </div>
+
+      <!-- Text Area & Auto Analyzer -->
+      <div class="space-y-3">
+        <label for="nlp-food-input" class="block text-xs font-semibold text-slate-300">
+          Escribe tu comida o picoteo (ej. <em class="text-slate-400 font-normal">"2 cafés con leche, un plato de lentejas, 4 albóndigas y 1 zanahoria"</em>):
+        </label>
+        <div class="relative">
+          <textarea id="nlp-food-input" rows="3" 
+            placeholder="Ejemplo: 2 cucharadas de yogur griego con zanahoria, 1 plato de lentejas y 4 albóndigas" 
+            class="w-full bg-slate-950 text-slate-100 placeholder-slate-500 text-sm p-3.5 rounded-xl border border-slate-700/80 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition custom-scrollbar"></textarea>
+          <button id="btn-parse-nlp" class="mt-2 sm:mt-0 sm:absolute sm:right-2.5 sm:bottom-2.5 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs px-4 py-2 rounded-lg transition shadow-md shadow-emerald-600/20 flex items-center gap-1.5 justify-center w-full sm:w-auto">
+            <span>⚡ Estimación Automática</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Preset Food Buttons -->
+      <div class="space-y-2 pt-1">
+        <span class="text-xs text-slate-400 font-semibold block">⚡ Accesos rápidos (Toca para añadir directamente):</span>
+        <div class="flex flex-wrap gap-2 text-xs">
+          <button class="btn-quick-preset bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg transition"
+                  data-food="Yogur griego 2 cdas + zanahoria" data-cal="100" data-prot="6">
+            🥣 Yogur griego (2 cdas) + 🥕 Zanahoria (100 kcal)
+          </button>
+          <button class="btn-quick-preset bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg transition"
+                  data-food="Café con leche" data-cal="60" data-prot="3.5">
+            ☕ Café con leche (60 kcal)
+          </button>
+          <button class="btn-quick-preset bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg transition"
+                  data-food="Ensalada completa con huevo y bonito" data-cal="280" data-prot="22">
+            🥗 Ensalada huevo + bonito + aceitunas (280 kcal)
+          </button>
+          <button class="btn-quick-preset bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg transition"
+                  data-food="Plato de Lentejas guisadas" data-cal="280" data-prot="18">
+            🍲 Plato de Lentejas (280 kcal)
+          </button>
+          <button class="btn-quick-preset bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg transition"
+                  data-food="4 Albóndigas" data-cal="260" data-prot="20">
+            🧆 4 Albóndigas (260 kcal)
+          </button>
+          <button class="btn-quick-preset bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg transition"
+                  data-food="Patatas guarnición" data-cal="140" data-prot="3">
+            🥔 Patatas guarnición (140 kcal)
+          </button>
+          <button class="btn-quick-preset bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg transition"
+                  data-food="Pimiento rojo" data-cal="30" data-prot="1">
+            🫑 Pimiento rojo (30 kcal)
+          </button>
+          <button class="btn-quick-preset bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg transition"
+                  data-food="Pechuga de pollo a la plancha (150g)" data-cal="200" data-prot="35">
+            🍗 Pechuga de Pollo 150g (200 kcal)
+          </button>
+          <button class="btn-quick-preset bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg transition"
+                  data-food="1 Plátano" data-cal="90" data-prot="1.1">
+            🍌 1 Plátano (90 kcal)
+          </button>
+        </div>
+      </div>
+
+      <!-- Parsed Results & Editable Addition Panel -->
+      <div id="nlp-result-box" class="hidden bg-slate-950 p-4 rounded-xl border border-emerald-500/30 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Desglose Estimado (Totalmente Editable)</span>
+          <span class="text-xs text-slate-400">Selecciona la toma del día para registrar</span>
+        </div>
+
+        <!-- Detected items list -->
+        <div id="nlp-items-container" class="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+          <!-- JS dynamic items -->
+        </div>
+
+        <!-- Total sum & Editable controls -->
+        <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 p-3 rounded-lg border border-slate-800">
+          <div class="flex items-center gap-3">
+            <div>
+              <label class="text-[10px] text-slate-400 font-semibold block uppercase">Calorías Totales (kcal)</label>
+              <input type="number" id="parsed-total-cal" class="w-24 bg-slate-950 text-emerald-400 font-extrabold text-base px-2 py-1 rounded border border-emerald-500/40 focus:border-emerald-400 outline-none" />
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 font-semibold block uppercase">Proteína Total (g)</label>
+              <input type="number" id="parsed-total-prot" step="0.1" class="w-20 bg-slate-950 text-teal-300 font-bold text-base px-2 py-1 rounded border border-slate-700 focus:border-emerald-400 outline-none" />
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <select id="meal-type-select" class="bg-slate-950 text-slate-200 text-xs font-medium px-3 py-2 rounded-lg border border-slate-700 outline-none">
+              <option value="Desayuno">☕ Desayuno</option>
+              <option value="Almuerzo" selected>🍲 Almuerzo / Comida</option>
+              <option value="Merienda">🍎 Merienda</option>
+              <option value="Cena">🥗 Cena</option>
+              <option value="Snack">🧀 Snack / Otros</option>
+            </select>
+            <button id="btn-add-parsed-meal" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs px-4 py-2 rounded-lg transition shadow-md shadow-emerald-500/20">
+              ➕ Añadir al Registro
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: LOGGED MEALS OF THE DAY -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h2 class="text-base font-bold text-slate-100 flex items-center gap-2">
+          <span>🍽️</span> <span>Registro de Comidas del Día</span>
+        </h2>
+        <span class="text-xs text-slate-400">Haz clic en los números para editar en cualquier momento</span>
+      </div>
+
+      <div id="meals-log-list" class="space-y-3">
+        <!-- JS renders logged meal items here -->
+      </div>
+    </section>
+
+    <!-- SECTION 3: EXERCISE, STEPS & POLAR WATCH CALORIE LOG -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <!-- Exercise & Workout Burn -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <h2 class="text-base font-bold text-slate-100 flex items-center gap-2">
+            <span>🏋️‍♂️</span> <span>Entrenamiento y Ejercicio</span>
+          </h2>
+          <span class="text-xs text-rose-400 font-semibold bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">Dato Reloj Polar</span>
+        </div>
+
+        <form id="form-add-exercise" class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Tipo de Actividad</label>
+            <select id="ex-type" class="w-full bg-slate-950 text-slate-200 text-xs p-2.5 rounded-xl border border-slate-700 outline-none focus:border-rose-500">
+              <option value="Gimnasio Fuerza - Pecho/Hombro/Tríceps" data-met="5.0">🏋️ Gimnasio: Pecho / Hombro / Tríceps</option>
+              <option value="Gimnasio Fuerza - Espalda/Bíceps/Pierna" data-met="6.0">🏋️ Gimnasio: Espalda / Bíceps / Pierna</option>
+              <option value="Running / Correr" data-met="8.5">🏃 Running / Correr</option>
+              <option value="Caminar / Paseo Activo" data-met="3.8">🚶 Caminar / Paseo Activo</option>
+              <option value="Ciclismo / Bici" data-met="7.0">🚴 Ciclismo / Bicicleta</option>
+              <option value="HIIT / Funcional" data-met="8.0">🔥 HIIT / Entrenamiento Funcional</option>
+              <option value="Pádel / Tenis" data-met="6.5">🎾 Pádel / Tenis</option>
+              <option value="Natación" data-met="7.5">🏊 Natación</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Duración (min)</label>
+              <input type="number" id="ex-duration" value="60" min="1" class="w-full bg-slate-950 text-slate-100 text-xs p-2.5 rounded-xl border border-slate-700 outline-none focus:border-rose-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-rose-300 mb-1">Calorías (Editable reloj Polar)</label>
+              <input type="number" id="ex-calories" placeholder="Auto / Edita tu reloj" class="w-full bg-slate-950 text-rose-400 font-bold text-xs p-2.5 rounded-xl border border-rose-500/50 outline-none focus:border-rose-400" />
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs py-2.5 rounded-xl transition shadow-md shadow-rose-600/20 flex items-center justify-center gap-1">
+            <span>➕ Registrar Ejercicio</span>
+          </button>
+        </form>
+
+        <!-- Logged exercises list -->
+        <div id="exercise-log-list" class="space-y-2 pt-2">
+          <!-- JS Dynamic exercise items -->
+        </div>
+      </div>
+
+      <!-- Steps & Polar Daily Burn Override -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4 flex flex-col justify-between">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h2 class="text-base font-bold text-slate-100 flex items-center gap-2">
+              <span>👟</span> <span>Pasos Diarios & Gasto Polar</span>
+            </h2>
+            <span class="text-xs text-amber-400 font-semibold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">Ajuste Directo</span>
+          </div>
+
+          <!-- Steps Counter -->
+          <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
+            <label class="block text-xs font-semibold text-slate-300">Contador de Pasos del Reloj</label>
+            <div class="grid grid-cols-2 gap-3 items-center">
+              <div>
+                <input type="number" id="steps-count" placeholder="Ej. 10000" class="w-full bg-slate-900 text-slate-100 text-sm font-bold p-2.5 rounded-lg border border-slate-700 outline-none focus:border-amber-500" />
+                <span class="text-[10px] text-slate-400 mt-1 block">pasos recorridos</span>
+              </div>
+              <div>
+                <input type="number" id="steps-calories" placeholder="Kcal de pasos" class="w-full bg-slate-900 text-amber-400 text-sm font-bold p-2.5 rounded-lg border border-amber-500/40 outline-none focus:border-amber-400" />
+                <span class="text-[10px] text-slate-400 mt-1 block">kcal estimadas / editables</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Polar Direct Daily Total Burn Override -->
+          <div class="bg-slate-950 p-3.5 rounded-xl border border-rose-500/30 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-rose-400 flex items-center gap-1.5">
+                <span>⌚</span> <span>Gasto Calórico Total Polar (Gasto Diario)</span>
+              </label>
+              <input type="checkbox" id="use-polar-total-toggle" class="w-4 h-4 accent-rose-500 rounded cursor-pointer" />
+            </div>
+            <p class="text-[11px] text-slate-400">
+              Si activas esta opción, se usará directamente la cifra global de tu reloj Polar (basal + actividad total) en vez de sumar metabolismo por separado.
+            </p>
+            <div class="flex items-center gap-2 pt-1">
+              <input type="number" id="polar-total-calories" placeholder="Ej. 2450 kcal" disabled
+                class="w-full bg-slate-900 text-rose-400 font-extrabold text-base p-2.5 rounded-lg border border-slate-800 outline-none disabled:opacity-50 focus:border-rose-500" />
+              <span class="text-xs text-slate-400 font-medium">kcal/día</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-[11px] text-slate-400 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+          💡 <strong>Tip Polar:</strong> Puedes meter o bien la actividad puntual arriba o activar la casilla del <strong>Gasto Total Diario</strong> para sincronizar el valor global de tu reloj de forma exacta.
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER / DATA MANAGEMENT -->
+  <footer class="max-w-6xl mx-auto w-full px-4 mt-8 pt-4 border-t border-slate-800 text-slate-500 text-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div>
+      FitTracker &copy; 2026 - Control Nutricional y Deportivo para Pérdida de Grasa.
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btn-export-json" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 rounded-lg transition text-xs flex items-center gap-1">
+        💾 Exportar Datos (JSON)
+      </button>
+      <label class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 rounded-lg transition text-xs cursor-pointer flex items-center gap-1">
+        📂 Importar Datos
+        <input type="file" id="input-import-json" accept=".json" class="hidden" />
+      </label>
+      <button id="btn-clear-day" class="px-3 py-1.5 bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 text-red-300 rounded-lg transition text-xs">
+        🗑️ Vaciar Día
+      </button>
+    </div>
+  </footer>
+
+  <!-- MODAL FOR SETTINGS AND GOALS -->
+  <div id="modal-settings" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+          <span>⚙️</span> <span>Ajustes de Perfil y Objetivos</span>
+        </h3>
+        <button id="btn-close-settings" class="text-slate-400 hover:text-white text-lg font-bold px-2">✕</button>
+      </div>
+
+      <form id="form-settings" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Peso (kg)</label>
+            <input type="number" id="set-weight" step="0.1" value="75" class="w-full bg-slate-950 text-slate-100 text-xs p-2.5 rounded-xl border border-slate-700 outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Altura (cm)</label>
+            <input type="number" id="set-height" value="175" class="w-full bg-slate-950 text-slate-100 text-xs p-2.5 rounded-xl border border-slate-700 outline-none focus:border-emerald-500" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Edad (años)</label>
+            <input type="number" id="set-age" value="30" class="w-full bg-slate-950 text-slate-100 text-xs p-2.5 rounded-xl border border-slate-700 outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Sexo</label>
+            <select id="set-gender" class="w-full bg-slate-950 text-slate-100 text-xs p-2.5 rounded-xl border border-slate-700 outline-none focus:border-emerald-500">
+              <option value="male">Hombre</option>
+              <option value="female">Mujer</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Metabolismo Basal Estimado (BMR kcal/día)</label>
+          <div class="flex gap-2">
+            <input type="number" id="set-bmr" value="1700" class="w-full bg-slate-950 text-emerald-400 font-bold text-xs p-2.5 rounded-xl border border-slate-700 outline-none focus:border-emerald-500" />
+            <button type="button" id="btn-calc-bmr" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs rounded-xl font-medium whitespace-nowrap">
+              Auto Mifflin
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Meta Ingesta (kcal)</label>
+            <input type="number" id="set-target-ingest" value="1900" class="w-full bg-slate-950 text-slate-100 text-xs p-2.5 rounded-xl border border-slate-700 outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Meta Proteína (g)</label>
+            <input type="number" id="set-target-prot" value="150" class="w-full bg-slate-950 text-slate-100 text-xs p-2.5 rounded-xl border border-slate-700 outline-none focus:border-emerald-500" />
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs py-2.5 rounded-xl transition shadow-lg shadow-emerald-500/20">
+            Guardar Configuración
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- NOTIFICATION TOAST -->
+  <div id="toast" class="fixed bottom-4 right-4 bg-slate-900 border border-slate-700 text-slate-100 text-xs px-4 py-3 rounded-xl shadow-2xl transition transform translate-y-20 opacity-0 z-50 flex items-center gap-2">
+    <span id="toast-icon">ℹ️</span>
+    <span id="toast-msg">Mensaje de notificación</span>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    /* ==========================================================================
+       SPANISH NUTRITIONAL DATABASE & NATURAL LANGUAGE PARSER
+       ========================================================================== */
+    
+    // Comprehensive Spanish Food Dictionary
+    const FOOD_DATABASE = [
+      { id: 'cafe_leche', names: ['cafe con leche', 'café con leche', 'cafes con leche', 'cafés con leche', 'cafe', 'café'], cal: 60, prot: 3.5, unit: 'taza' },
+      { id: 'lentejas', names: ['plato de lentejas', 'lentejas guisadas', 'lentejas'], cal: 280, prot: 18, unit: 'plato' },
+      { id: 'albondigas', names: ['albondigas', 'albóndigas', 'albondiga', 'albóndiga'], cal: 65, prot: 5, unit: 'unidad' },
+      { id: 'zanahoria', names: ['zanahorias', 'zanahoria'], cal: 30, prot: 0.7, unit: 'unidad' },
+      { id: 'yogur_griego', names: ['yogur griego natural', 'yogur griego', 'yogurt griego'], cal: 35, prot: 2.5, unit: 'cucharada' }, // 1 cda ~ 30g
+      { id: 'pimiento_rojo', names: ['pimiento rojo', 'pimientos rojos', 'pimiento'], cal: 30, prot: 1.0, unit: 'unidad' },
+      { id: 'platano', names: ['platano', 'plátano', 'platanos', 'plátanos', 'banano'], cal: 90, prot: 1.1, unit: 'unidad' },
+      { id: 'bonito', names: ['bonito', 'atun', 'atún', 'lata de bonito', 'lata de atun'], cal: 130, prot: 24, unit: 'lata/ración' },
+      { id: 'huevo', names: ['huevo cocido', 'huevo frito', 'huevo', 'huevos'], cal: 75, prot: 6.5, unit: 'unidad' },
+      { id: 'esparragos', names: ['esparragos', 'espárragos', 'esparrago', 'espárrago'], cal: 20, prot: 2.2, unit: 'ración' },
+      { id: 'aceitunas', names: ['aceitunas', 'aceituna', 'olivas'], cal: 45, prot: 0.5, unit: 'ración' },
+      { id: 'pan', names: ['rebanada de pan', 'trozo de pan', 'pan'], cal: 80, prot: 2.5, unit: 'rebanada' },
+      { id: 'hamburguesa', names: ['hamburguesa de ternera', 'hamburguesa'], cal: 250, prot: 20, unit: 'unidad' },
+      { id: 'galletas', names: ['galletas', 'galleta'], cal: 45, prot: 0.7, unit: 'unidad' },
+      { id: 'nachos_guacamole', names: ['nachos con guacamole', 'nachos', 'guacamole'], cal: 320, prot: 5, unit: 'ración' },
+      { id: 'muesli', names: ['muesli', 'granola'], cal: 180, prot: 5, unit: 'ración' },
+      { id: 'pechuga_pollo', names: ['pechuga de pollo', 'pollo a la plancha', 'pechuga pollo', 'pollo'], cal: 165, prot: 31, unit: '100g' },
+      { id: 'salchichas_pollo', names: ['salchichas de pollo', 'salchicha de pollo', 'salchichas'], cal: 70, prot: 5, unit: 'unidad' },
+      { id: 'patatas_guarnicion', names: ['patatas guarnicion', 'patatas guarnición', 'patatas asadas', 'patatas', 'patata'], cal: 140, prot: 3, unit: 'ración' },
+      { id: 'pescado_blanco', names: ['pescado blanco', 'merluza', 'bacalao', 'filete de pescado'], cal: 90, prot: 18, unit: '100g' },
+      { id: 'ensalada_completa', names: ['ensalada con huevo, bonito y aceitunas', 'ensalada con huevo y bonito', 'ensalada completa', 'ensalada mixta', 'ensalada'], cal: 250, prot: 20, unit: 'plato' },
+      { id: 'arroz', names: ['arroz cocido', 'arroz blanco', 'arroz'], cal: 130, prot: 2.7, unit: '100g' },
+      { id: 'pasta', names: ['pasta cocida', 'macarrones', 'espaguetis', 'pasta'], cal: 140, prot: 5, unit: '100g' },
+      { id: 'manzana', names: ['manzana', 'manzanas'], cal: 75, prot: 0.4, unit: 'unidad' },
+      { id: 'aceite_oliva', names: ['aceite de oliva', 'cucharada de aceite', 'aceite'], cal: 120, prot: 0, unit: 'cucharada' }
+    ];
+
+    // Spanish Number & Word Map
+    const NUMBER_WORDS = {
+      'un': 1, 'una': 1, 'uno': 1, '1': 1,
+      'dos': 2, '2': 2,
+      'tres': 3, '3': 3,
+      'cuatro': 4, '4': 4,
+      'cinco': 5, '5': 5,
+      'seis': 6, '6': 6,
+      'siete': 7, '7': 7,
+      'ocho': 8, '8': 8,
+      'nueve': 9, '9': 9,
+      'diez': 10, '10': 10,
+      'medio': 0.5, 'media': 0.5, 'mitad': 0.5, '1/2': 0.5,
+      'un tercio': 0.33, '1/3': 0.33,
+      'un cuarto': 0.25, '1/4': 0.25,
+      'tres cuartos': 0.75, '3/4': 0.75
+    };
+
+    // Parse natural language text input
+    function parseSpanishFoodText(text) {
+      if (!text || !text.trim()) return [];
+      
+      const rawText = text.toLowerCase().trim();
+      // Split clauses by comma, linebreaks, plus sign, or ' y '
+      const clauses = rawText.split(/,|\n|\+|\sy\s/).map(c => c.trim()).filter(c => c.length > 0);
+      
+      const parsedResults = [];
+
+      clauses.forEach(clause => {
+        let matchedFood = null;
+        let matchedKeyword = '';
+
+        // Sort food dictionary by length of aliases descending to match long phrases first
+        const sortedDb = [...FOOD_DATABASE].sort((a, b) => {
+          const maxA = Math.max(...a.names.map(n => n.length));
+          const maxB = Math.max(...b.names.map(n => n.length));
+          return maxB - maxA;
+        });
+
+        for (const food of sortedDb) {
+          for (const nameAlias of food.names) {
+            if (clause.includes(nameAlias)) {
+              matchedFood = food;
+              matchedKeyword = nameAlias;
+              break;
+            }
+          }
+          if (matchedFood) break;
+        }
+
+        if (matchedFood) {
+          // Detect quantity in clause
+          let qty = 1;
+          
+          // Check for unit mentions like "cucharadas", "cdas", "plato", "grams"
+          if (clause.includes('cucharada') || clause.includes('cucharadas') || clause.includes('cdas') || clause.includes('cda')) {
+            // Check if food was yogur or oil, adjust
+          }
+
+          // Check numbers
+          for (const [word, val] of Object.entries(NUMBER_WORDS)) {
+            // Regex match for standalone word or number
+            const regex = new RegExp(`\\b${word}\\b`, 'i');
+            if (regex.test(clause)) {
+              qty = val;
+              break;
+            }
+          }
+
+          // Grams check (e.g. 150g or 200 gramos)
+          const gMatch = clause.match(/(\d+)\s*(g|gr|gramos)/i);
+          if (gMatch && gMatch[1]) {
+            const grams = parseFloat(gMatch[1]);
+            qty = grams / 100; // Base multiplier
+          } else {
+            // Digit standalone match if not grams
+            const dMatch = clause.match(/\b(\d+(\.\d+)?)\b/);
+            if (dMatch && dMatch[1] && !clause.includes('1/2') && !clause.includes('1/3') && !clause.includes('1/4')) {
+              qty = parseFloat(dMatch[1]);
+            }
+          }
+
+          const cal = Math.round(matchedFood.cal * qty);
+          const prot = parseFloat((matchedFood.prot * qty).toFixed(1));
+
+          parsedResults.push({
+            name: matchedFood.names[0].charAt(0).toUpperCase() + matchedFood.names[0].slice(1),
+            qty: qty,
+            unit: matchedFood.unit,
+            cal: cal,
+            prot: prot
+          });
+        } else {
+          // Unmatched clause fallback
+          parsedResults.push({
+            name: clause.charAt(0).toUpperCase() + clause.slice(1),
+            qty: 1,
+            unit: 'ración',
+            cal: 120, // Default estimate
+            prot: 5.0
+          });
+        }
+      });
+
+      return parsedResults;
+    }
+
+
+    /* ==========================================================================
+       APP STATE & STORAGE LOGIC
+       ========================================================================== */
+    
+    let currentDate = getTodayString();
+    
+    let appProfile = {
+      weight: 75,
+      height: 175,
+      age: 30,
+      gender: 'male',
+      bmr: 1700,
+      targetIngest: 1900,
+      targetProt: 150
+    };
+
+    let currentDayData = {
+      meals: [], // { id, name, cal, prot, mealType }
+      exercises: [], // { id, name, duration, cal }
+      steps: 0,
+      stepsCal: 0,
+      usePolarTotal: false,
+      polarTotalCal: 2450
+    };
+
+    function getTodayString() {
+      const d = new Date();
+      return d.toISOString().split('T')[0];
+    }
+
+    function loadProfile() {
+      const saved = localStorage.getItem('fitTracker_profile');
+      if (saved) {
+        try { appProfile = Object.assign(appProfile, JSON.parse(saved)); } catch(e){}
+      }
+    }
+
+    function saveProfile() {
+      localStorage.setItem('fitTracker_profile', JSON.stringify(appProfile));
+    }
+
+    function loadDayData(dateStr) {
+      const saved = localStorage.getItem(`fitTracker_day_${dateStr}`);
+      if (saved) {
+        try {
+          currentDayData = JSON.parse(saved);
+        } catch(e) {
+          currentDayData = { meals: [], exercises: [], steps: 0, stepsCal: 0, usePolarTotal: false, polarTotalCal: 2450 };
+        }
+      } else {
+        currentDayData = { meals: [], exercises: [], steps: 0, stepsCal: 0, usePolarTotal: false, polarTotalCal: 2450 };
+      }
+    }
+
+    function saveDayData() {
+      localStorage.setItem(`fitTracker_day_${currentDate}`, JSON.stringify(currentDayData));
+    }
+
+
+    /* ==========================================================================
+       DOM ELEMENTS & INITIALIZATION
+       ========================================================================== */
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      loadProfile();
+      
+      // DOM Elements
+      const datePicker = document.getElementById('date-picker');
+      datePicker.value = currentDate;
+
+      // Event Listeners for Date Navigation
+      datePicker.addEventListener('change', (e) => {
+        currentDate = e.target.value;
+        onDateChanged();
+      });
+
+      document.getElementById('btn-prev-day').addEventListener('click', () => {
+        const d = new Date(currentDate);
+        d.setDate(d.getDate() - 1);
+        currentDate = d.toISOString().split('T')[0];
+        datePicker.value = currentDate;
+        onDateChanged();
+      });
+
+      document.getElementById('btn-next-day').addEventListener('click', () => {
+        const d = new Date(currentDate);
+        d.setDate(d.getDate() + 1);
+        currentDate = d.toISOString().split('T')[0];
+        datePicker.value = currentDate;
+        onDateChanged();
+      });
+
+      document.getElementById('btn-today').addEventListener('click', () => {
+        currentDate = getTodayString();
+        datePicker.value = currentDate;
+        onDateChanged();
+      });
+
+      // Settings Modal Listeners
+      setupSettingsModal();
+
+      // NLP Parser Listeners
+      setupNLPParser();
+
+      // Quick Preset Food Buttons
+      setupQuickPresets();
+
+      // Exercise & Steps Listeners
+      setupExerciseAndSteps();
+
+      // Backup & Data Listeners
+      setupBackupAndExport();
+
+      // Initial Load
+      onDateChanged();
+    });
+
+    function onDateChanged() {
+      loadDayData(currentDate);
+      renderAll();
+    }
+
+    /* ==========================================================================
+       RENDERERS & UI UPDATERS
+       ========================================================================== */
+
+    function renderAll() {
+      renderDashboard();
+      renderMealsLog();
+      renderExerciseLog();
+      renderStepsAndPolar();
+    }
+
+    function renderDashboard() {
+      // 1. Ingested total
+      const totalIngested = currentDayData.meals.reduce((acc, item) => acc + Number(item.cal || 0), 0);
+      const totalProtein = currentDayData.meals.reduce((acc, item) => acc + Number(item.prot || 0), 0);
+
+      // 2. Burned total
+      let totalBurned = 0;
+      if (currentDayData.usePolarTotal) {
+        totalBurned = Number(currentDayData.polarTotalCal || 0);
+      } else {
+        const exerciseBurn = currentDayData.exercises.reduce((acc, ex) => acc + Number(ex.cal || 0), 0);
+        const stepsBurn = Number(currentDayData.stepsCal || 0);
+        totalBurned = Number(appProfile.bmr || 1700) + exerciseBurn + stepsBurn;
+      }
+
+      // 3. Net Balance
+      const netBalance = totalIngested - totalBurned;
+
+      // Update DOM Text
+      document.getElementById('dash-ingested').textContent = Math.round(totalIngested);
+      document.getElementById('dash-burned').textContent = Math.round(totalBurned);
+      
+      const dashNet = document.getElementById('dash-net');
+      dashNet.textContent = (netBalance > 0 ? '+' : '') + Math.round(netBalance);
+      dashNet.className = `text-xl sm:text-2xl font-black ${netBalance <= 0 ? 'text-emerald-400' : 'text-amber-400'}`;
+
+      // Badge & Status Advice
+      const badge = document.getElementById('deficit-badge');
+      if (netBalance < -250 && netBalance >= -700) {
+        badge.textContent = '🔥 Déficit óptimo para pérdida de grasa';
+        badge.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+      } else if (netBalance < -700) {
+        badge.textContent = '⚠️ Déficit agresivo (Cuidado con masa muscular)';
+        badge.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20';
+      } else if (netBalance >= -250 && netBalance <= 150) {
+        badge.textContent = '⚖️ Mantenimiento calórico';
+        badge.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20';
+      } else {
+        badge.textContent = '📈 Superávit calórico (Ganancia)';
+        badge.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20';
+      }
+
+      // Progress bar towards Ingest target
+      document.getElementById('target-ingest-val').textContent = `${appProfile.targetIngest} kcal`;
+      const targetDeficit = Math.round(totalBurned - appProfile.targetIngest);
+      document.getElementById('target-deficit-val').textContent = `${targetDeficit > 0 ? targetDeficit : 0} kcal`;
+
+      const percentIngest = Math.min(100, Math.round((totalIngested / (appProfile.targetIngest || 1)) * 100));
+      document.getElementById('deficit-progress-bar').style.width = `${percentIngest}%`;
+
+      // Protein bar
+      document.getElementById('dash-protein').textContent = Math.round(totalProtein);
+      document.getElementById('target-protein-val').textContent = `${appProfile.targetProt}g`;
+      document.getElementById('target-prot-max').textContent = appProfile.targetProt;
+
+      const percentProt = Math.min(100, Math.round((totalProtein / (appProfile.targetProt || 1)) * 100));
+      document.getElementById('protein-progress-bar').style.width = `${percentProt}%`;
+    }
+
+    function renderMealsLog() {
+      const container = document.getElementById('meals-log-list');
+      container.innerHTML = '';
+
+      if (!currentDayData.meals || currentDayData.meals.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-6 text-slate-500 text-xs bg-slate-950/40 rounded-xl border border-slate-800/60">
+            No has registrado ninguna comida hoy. Usa el analizador o los botones rápidos.
+          </div>
+        `;
+        return;
+      }
+
+      // Group meals by mealType
+      const mealTypes = ['Desayuno', 'Almuerzo', 'Merienda', 'Cena', 'Snack'];
+      
+      mealTypes.forEach(mType => {
+        const items = currentDayData.meals.filter(m => (m.mealType || 'Almuerzo') === mType);
+        if (items.length === 0) return;
+
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'bg-slate-950/70 p-3 rounded-xl border border-slate-800 space-y-2';
+
+        let typeIcon = '🍲';
+        if (mType === 'Desayuno') typeIcon = '☕';
+        if (mType === 'Merienda') typeIcon = '🍎';
+        if (mType === 'Cena') typeIcon = '🥗';
+        if (mType === 'Snack') typeIcon = '🧀';
+
+        const groupHeader = document.createElement('div');
+        groupHeader.className = 'flex justify-between items-center text-xs font-bold text-slate-300 border-b border-slate-800/80 pb-1.5';
+        
+        const typeSumCal = items.reduce((acc, i) => acc + Number(i.cal || 0), 0);
+        const typeSumProt = items.reduce((acc, i) => acc + Number(i.prot || 0), 0);
+
+        groupHeader.innerHTML = `
+          <span>${typeIcon} ${mType}</span>
+          <span class="text-slate-400 font-mono text-[11px]">${typeSumCal} kcal | ${typeSumProt.toFixed(1)}g prot</span>
+        `;
+        groupDiv.appendChild(groupHeader);
+
+        items.forEach(item => {
+          const itemRow = document.createElement('div');
+          itemRow.className = 'flex flex-wrap items-center justify-between gap-2 text-xs py-1 px-1 rounded hover:bg-slate-900/80 transition';
+          
+          itemRow.innerHTML = `
+            <div class="flex-1 font-medium text-slate-200">
+              ${item.name}
+            </div>
+
+            <!-- Editable Numeric Fields -->
+            <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1">
+                <input type="number" value="${item.cal}" data-id="${item.id}" data-field="cal"
+                  class="edit-meal-input w-16 bg-slate-900 text-emerald-400 font-bold text-xs px-1.5 py-1 rounded border border-slate-700 text-right outline-none focus:border-emerald-500" />
+                <span class="text-[10px] text-slate-500">kcal</span>
+              </div>
+
+              <div class="flex items-center gap-1">
+                <input type="number" step="0.1" value="${item.prot}" data-id="${item.id}" data-field="prot"
+                  class="edit-meal-input w-14 bg-slate-900 text-teal-300 font-semibold text-xs px-1.5 py-1 rounded border border-slate-700 text-right outline-none focus:border-teal-400" />
+                <span class="text-[10px] text-slate-500">g prot</span>
+              </div>
+
+              <button data-id="${item.id}" class="btn-delete-meal text-slate-500 hover:text-rose-400 p-1 text-sm font-bold transition" title="Eliminar">
+                ✕
+              </button>
+            </div>
+          `;
+
+          groupDiv.appendChild(itemRow);
+        });
+
+        container.appendChild(groupDiv);
+      });
+
+      // Bind input listeners for live editing
+      document.querySelectorAll('.edit-meal-input').forEach(input => {
+        input.addEventListener('change', (e) => {
+          const id = e.target.getAttribute('data-id');
+          const field = e.target.getAttribute('data-field');
+          const val = parseFloat(e.target.value) || 0;
+          
+          const meal = currentDayData.meals.find(m => m.id === id);
+          if (meal) {
+            meal[field] = val;
+            saveDayData();
+            renderDashboard();
+            showToast('✅ Registro de comida actualizado');
+          }
+        });
+      });
+
+      // Bind delete buttons
+      document.querySelectorAll('.btn-delete-meal').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = e.currentTarget.getAttribute('data-id');
+          currentDayData.meals = currentDayData.meals.filter(m => m.id !== id);
+          saveDayData();
+          renderAll();
+          showToast('🗑️ Comida eliminada');
+        });
+      });
+    }
+
+    function renderExerciseLog() {
+      const container = document.getElementById('exercise-log-list');
+      container.innerHTML = '';
+
+      if (!currentDayData.exercises || currentDayData.exercises.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-4 text-slate-500 text-xs bg-slate-950/40 rounded-xl border border-slate-800/60">
+            Sin sesiones de ejercicio registradas hoy.
+          </div>
+        `;
+        return;
+      }
+
+      currentDayData.exercises.forEach(ex => {
+        const itemRow = document.createElement('div');
+        itemRow.className = 'flex items-center justify-between gap-2 text-xs bg-slate-950/80 p-2.5 rounded-xl border border-slate-800';
+
+        itemRow.innerHTML = `
+          <div>
+            <span class="font-bold text-slate-200 block">${ex.name}</span>
+            <span class="text-[11px] text-slate-400">${ex.duration} minutos</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <input type="number" value="${ex.cal}" data-id="${ex.id}"
+              class="edit-ex-input w-20 bg-slate-900 text-rose-400 font-bold text-xs px-2 py-1 rounded border border-rose-500/30 text-right outline-none focus:border-rose-400" />
+            <span class="text-[10px] text-slate-500">kcal (Polar)</span>
+            
+            <button data-id="${ex.id}" class="btn-delete-ex text-slate-500 hover:text-rose-400 p-1 font-bold text-sm" title="Eliminar">
+              ✕
+            </button>
+          </div>
+        `;
+
+        container.appendChild(itemRow);
+      });
+
+      // Bind editing
+      document.querySelectorAll('.edit-ex-input').forEach(input => {
+        input.addEventListener('change', (e) => {
+          const id = e.target.getAttribute('data-id');
+          const val = parseFloat(e.target.value) || 0;
+          const ex = currentDayData.exercises.find(x => x.id === id);
+          if (ex) {
+            ex.cal = val;
+            saveDayData();
+            renderDashboard();
+            showToast('⌚ Calorías de ejercicio actualizadas (Polar)');
+          }
+        });
+      });
+
+      // Bind delete
+      document.querySelectorAll('.btn-delete-ex').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = e.currentTarget.getAttribute('data-id');
+          currentDayData.exercises = currentDayData.exercises.filter(x => x.id !== id);
+          saveDayData();
+          renderAll();
+          showToast('🗑️ Ejercicio eliminado');
+        });
+      });
+    }
+
+    function renderStepsAndPolar() {
+      document.getElementById('steps-count').value = currentDayData.steps || '';
+      document.getElementById('steps-calories').value = currentDayData.stepsCal || '';
+
+      const polarToggle = document.getElementById('use-polar-total-toggle');
+      polarToggle.checked = !!currentDayData.usePolarTotal;
+
+      const polarInput = document.getElementById('polar-total-calories');
+      polarInput.disabled = !currentDayData.usePolarTotal;
+      polarInput.value = currentDayData.polarTotalCal || 2450;
+    }
+
+
+    /* ==========================================================================
+       SETUP HANDLERS & LISTENERS
+       ========================================================================== */
+
+    function setupNLPParser() {
+      const btnParse = document.getElementById('btn-parse-nlp');
+      const inputArea = document.getElementById('nlp-food-input');
+      const resultBox = document.getElementById('nlp-result-box');
+      const itemsContainer = document.getElementById('nlp-items-container');
+      
+      const totalCalInput = document.getElementById('parsed-total-cal');
+      const totalProtInput = document.getElementById('parsed-total-prot');
+
+      let currentParsedItems = [];
+
+      btnParse.addEventListener('click', () => {
+        const text = inputArea.value;
+        if (!text.trim()) {
+          showToast('⚠️ Por favor escribe qué has comido.');
+          return;
+        }
+
+        currentParsedItems = parseSpanishFoodText(text);
+        renderParsedItems();
+      });
+
+      function renderParsedItems() {
+        itemsContainer.innerHTML = '';
+        resultBox.classList.remove('hidden');
+
+        let sumCal = 0;
+        let sumProt = 0;
+
+        currentParsedItems.forEach((item, index) => {
+          sumCal += Number(item.cal || 0);
+          sumProt += Number(item.prot || 0);
+
+          const row = document.createElement('div');
+          row.className = 'flex flex-wrap items-center justify-between gap-2 bg-slate-900 p-2 rounded-lg border border-slate-800 text-xs';
+
+          row.innerHTML = `
+            <div class="flex items-center gap-2 flex-1">
+              <span class="text-slate-400">🔹</span>
+              <input type="text" value="${item.name}" data-idx="${index}" data-key="name"
+                class="parse-item-field bg-transparent text-slate-100 font-medium text-xs border-b border-dashed border-slate-700 focus:border-emerald-500 outline-none w-full max-w-[180px]" />
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-1">
+                <input type="number" value="${item.cal}" data-idx="${index}" data-key="cal"
+                  class="parse-item-field w-16 bg-slate-950 text-emerald-400 font-bold text-xs p-1 rounded border border-slate-700 text-right outline-none" />
+                <span class="text-[10px] text-slate-500">kcal</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <input type="number" step="0.1" value="${item.prot}" data-idx="${index}" data-key="prot"
+                  class="parse-item-field w-14 bg-slate-950 text-teal-300 font-semibold text-xs p-1 rounded border border-slate-700 text-right outline-none" />
+                <span class="text-[10px] text-slate-500">g prot</span>
+              </div>
+            </div>
+          `;
+
+          itemsContainer.appendChild(row);
+        });
+
+        totalCalInput.value = Math.round(sumCal);
+        totalProtInput.value = parseFloat(sumProt.toFixed(1));
+
+        // Listeners for individual item edits
+        document.querySelectorAll('.parse-item-field').forEach(field => {
+          field.addEventListener('input', (e) => {
+            const idx = e.target.getAttribute('data-idx');
+            const key = e.target.getAttribute('data-key');
+            const val = e.target.value;
+
+            if (key === 'cal' || key === 'prot') {
+              currentParsedItems[idx][key] = parseFloat(val) || 0;
+              // Recalculate totals
+              recalcTotalsFromItems();
+            } else {
+              currentParsedItems[idx][key] = val;
+            }
+          });
+        });
+      }
+
+      function recalcTotalsFromItems() {
+        const sumC = currentParsedItems.reduce((acc, i) => acc + Number(i.cal || 0), 0);
+        const sumP = currentParsedItems.reduce((acc, i) => acc + Number(i.prot || 0), 0);
+        totalCalInput.value = Math.round(sumC);
+        totalProtInput.value = parseFloat(sumP.toFixed(1));
+      }
+
+      // Add parsed meal to daily log
+      document.getElementById('btn-add-parsed-meal').addEventListener('click', () => {
+        const totalCal = parseFloat(totalCalInput.value) || 0;
+        const totalProt = parseFloat(totalProtInput.value) || 0;
+        const mealType = document.getElementById('meal-type-select').value;
+        const rawText = inputArea.value.trim() || 'Comida introducida';
+
+        // Summary title
+        const summaryTitle = currentParsedItems.map(i => i.name).join(', ') || rawText;
+
+        const newMeal = {
+          id: 'meal_' + Date.now(),
+          name: summaryTitle,
+          cal: totalCal,
+          prot: totalProt,
+          mealType: mealType
+        };
+
+        currentDayData.meals.push(newMeal);
+        saveDayData();
+        renderAll();
+
+        // Clear input area & result box
+        inputArea.value = '';
+        resultBox.classList.add('hidden');
+        showToast('✅ Comida registrada correctamente');
+      });
+    }
+
+    function setupQuickPresets() {
+      document.querySelectorAll('.btn-quick-preset').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const foodName = e.currentTarget.getAttribute('data-food');
+          const cal = parseFloat(e.currentTarget.getAttribute('data-cal')) || 0;
+          const prot = parseFloat(e.currentTarget.getAttribute('data-prot')) || 0;
+          const mealType = document.getElementById('meal-type-select').value || 'Almuerzo';
+
+          const newMeal = {
+            id: 'meal_' + Date.now(),
+            name: foodName,
+            cal: cal,
+            prot: prot,
+            mealType: mealType
+          };
+
+          currentDayData.meals.push(newMeal);
+          saveDayData();
+          renderAll();
+          showToast(`⚡ Añadido: ${foodName}`);
+        });
+      });
+    }
+
+    function setupExerciseAndSteps() {
+      // Auto-calculate MET calories on exercise form change
+      const exSelect = document.getElementById('ex-type');
+      const exDur = document.getElementById('ex-duration');
+      const exCalInput = document.getElementById('ex-calories');
+
+      function calcEstimatedExCal() {
+        const selectedOpt = exSelect.options[exSelect.selectedIndex];
+        const met = parseFloat(selectedOpt.getAttribute('data-met')) || 5.0;
+        const mins = parseFloat(exDur.value) || 0;
+        const weight = appProfile.weight || 75;
+
+        // Formula: Calories = MET * weight(kg) * (duration / 60)
+        const estimated = Math.round(met * weight * (mins / 60));
+        exCalInput.value = estimated;
+      }
+
+      exSelect.addEventListener('change', calcEstimatedExCal);
+      exDur.addEventListener('input', calcEstimatedExCal);
+      
+      // Initialize calculation once
+      calcEstimatedExCal();
+
+      // Submit Exercise Form
+      document.getElementById('form-add-exercise').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const exName = exSelect.value;
+        const duration = parseFloat(exDur.value) || 0;
+        const cal = parseFloat(exCalInput.value) || 0;
+
+        const newEx = {
+          id: 'ex_' + Date.now(),
+          name: exName,
+          duration: duration,
+          cal: cal
+        };
+
+        currentDayData.exercises.push(newEx);
+        saveDayData();
+        renderAll();
+        showToast('🏋️‍♂️ Ejercicio registrado con éxito');
+      });
+
+      // Steps listeners
+      const stepsInput = document.getElementById('steps-count');
+      const stepsCalInput = document.getElementById('steps-calories');
+
+      stepsInput.addEventListener('input', (e) => {
+        const steps = parseFloat(e.target.value) || 0;
+        currentDayData.steps = steps;
+        // Auto estimate: ~0.04 kcal per step
+        const estCal = Math.round(steps * 0.04);
+        currentDayData.stepsCal = estCal;
+        stepsCalInput.value = estCal;
+        saveDayData();
+        renderDashboard();
+      });
+
+      stepsCalInput.addEventListener('input', (e) => {
+        currentDayData.stepsCal = parseFloat(e.target.value) || 0;
+        saveDayData();
+        renderDashboard();
+      });
+
+      // Polar Total Daily Burn listeners
+      const polarToggle = document.getElementById('use-polar-total-toggle');
+      const polarInput = document.getElementById('polar-total-calories');
+
+      polarToggle.addEventListener('change', (e) => {
+        currentDayData.usePolarTotal = e.target.checked;
+        polarInput.disabled = !e.target.checked;
+        saveDayData();
+        renderDashboard();
+        showToast(e.target.checked ? '⌚ Sincronización Polar Total Activada' : '🔄 Cambiado a Cálculo por Componentes');
+      });
+
+      polarInput.addEventListener('input', (e) => {
+        currentDayData.polarTotalCal = parseFloat(e.target.value) || 0;
+        saveDayData();
+        renderDashboard();
+      });
+    }
+
+    function setupSettingsModal() {
+      const modal = document.getElementById('modal-settings');
+      const btnOpen = document.getElementById('btn-open-settings');
+      const btnClose = document.getElementById('btn-close-settings');
+      const form = document.getElementById('form-settings');
+
+      btnOpen.addEventListener('click', () => {
+        // Populate form
+        document.getElementById('set-weight').value = appProfile.weight;
+        document.getElementById('set-height').value = appProfile.height;
+        document.getElementById('set-age').value = appProfile.age;
+        document.getElementById('set-gender').value = appProfile.gender;
+        document.getElementById('set-bmr').value = appProfile.bmr;
+        document.getElementById('set-target-ingest').value = appProfile.targetIngest;
+        document.getElementById('set-target-prot').value = appProfile.targetProt;
+
+        modal.classList.remove('hidden');
+      });
+
+      btnClose.addEventListener('click', () => {
+        modal.classList.add('hidden');
+      });
+
+      // Auto Mifflin-St Jeor BMR Calculator
+      document.getElementById('btn-calc-bmr').addEventListener('click', () => {
+        const w = parseFloat(document.getElementById('set-weight').value) || 75;
+        const h = parseFloat(document.getElementById('set-height').value) || 175;
+        const a = parseFloat(document.getElementById('set-age').value) || 30;
+        const gender = document.getElementById('set-gender').value;
+
+        let bmr = (10 * w) + (6.25 * h) - (5 * a);
+        bmr = (gender === 'male') ? bmr + 5 : bmr - 161;
+
+        document.getElementById('set-bmr').value = Math.round(bmr);
+        showToast('✨ BMR estimado por Mifflin-St Jeor');
+      });
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        appProfile.weight = parseFloat(document.getElementById('set-weight').value) || 75;
+        appProfile.height = parseFloat(document.getElementById('set-height').value) || 175;
+        appProfile.age = parseFloat(document.getElementById('set-age').value) || 30;
+        appProfile.gender = document.getElementById('set-gender').value;
+        appProfile.bmr = parseFloat(document.getElementById('set-bmr').value) || 1700;
+        appProfile.targetIngest = parseFloat(document.getElementById('set-target-ingest').value) || 1900;
+        appProfile.targetProt = parseFloat(document.getElementById('set-target-prot').value) || 150;
+
+        saveProfile();
+        modal.classList.add('hidden');
+        renderDashboard();
+        showToast('💾 Ajustes guardados correctamente');
+      });
+    }
+
+    function setupBackupAndExport() {
+      // Export JSON
+      document.getElementById('btn-export-json').addEventListener('click', () => {
+        const backupData = {
+          profile: appProfile,
+          days: {}
+        };
+
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key.startsWith('fitTracker_day_')) {
+            backupData.days[key] = JSON.parse(localStorage.getItem(key));
+          }
+        }
+
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `FitTracker_Copia_${currentDate}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+
+        showToast('💾 Copia de seguridad exportada');
+      });
+
+      // Import JSON
+      document.getElementById('input-import-json').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const imported = JSON.parse(event.target.result);
+            if (imported.profile) {
+              appProfile = imported.profile;
+              saveProfile();
+            }
+            if (imported.days) {
+              Object.keys(imported.days).forEach(key => {
+                localStorage.setItem(key, JSON.stringify(imported.days[key]));
+              });
+            }
+            onDateChanged();
+            showToast('📂 Datos importados con éxito');
+          } catch(err) {
+            showToast('❌ Archivo JSON no válido');
+          }
+        };
+        reader.readAsText(file);
+      });
+
+      // Clear Day
+      document.getElementById('btn-clear-day').addEventListener('click', () => {
+        if (confirm(`¿Vaciar todos los registros del día ${currentDate}?`)) {
+          currentDayData = { meals: [], exercises: [], steps: 0, stepsCal: 0, usePolarTotal: false, polarTotalCal: 2450 };
+          saveDayData();
+          renderAll();
+          showToast('🗑️ Registro del día vaciado');
+        }
+      });
+    }
+
+    // Helper Toast notification
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const msgElem = document.getElementById('toast-msg');
+      msgElem.textContent = msg;
+
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
